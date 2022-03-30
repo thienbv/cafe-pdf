@@ -73,6 +73,10 @@ export default {
       type: Number,
       default: 0,
     },
+    scale: {
+      type: String,
+      default: '1',
+    }
   },
   data() {
     return {
@@ -86,7 +90,6 @@ export default {
       pdfLoadingTask: null,
       linkService: null,
       catalogue: null,
-      scale: 'auto',
       fnScroll: () => {},
     };
   },
