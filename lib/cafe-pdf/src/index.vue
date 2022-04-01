@@ -158,7 +158,10 @@ export default {
       eventBus.on('pagesinit', function() {
         _this.pdfViewer.currentScaleValue = _this.scale;
       });
-      
+      const self = this;
+      eventBus.on('pagerender', function({pageNumber}) {
+        self.$emit('on-pagerender', pageNumber);
+      });
       this.pdfLoadingTask = PDFLib.getDocument({ 
         url: this.filePath,
         CMapReaderFactory
