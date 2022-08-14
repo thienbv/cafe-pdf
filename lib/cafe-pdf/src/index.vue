@@ -1,5 +1,5 @@
 <template>
-  <div class="pdf-box" :style="{ width: formateWidth, height: formateHeight }">
+  <div class="pdf-box" :style="style">
     <div v-if="$slots.header" class="pdf-header">
       <slot name="header"></slot>
     </div>
@@ -8,7 +8,7 @@
         v-if="catalogue && catalogue.length > 0 && showNav"
         class="pdf-catalogue"
       >
-        <tree :list="catalogue" @item-click="nav"></tree>
+        <tree :list="catalogue" @item-click="nav" />
       </div>
       <div class="pdf-container" ref="container" @scroll="fnScroll">
         <div class="pdf-viewer" ref="viewer"></div>
@@ -27,27 +27,22 @@
     </div>
   </div>
 </template>
-
 <script>
 import Tree from './tree/index.vue';
-import PDFLib from './pdfjs-dist/webpack';
+import PDFLib from './plugin/pdfjs-dist/webpack';
 import {
   PDFLinkService,
   PDFViewer,
   EventBus,
-} from './pdfjs-dist/web/pdf_viewer.js';
-import './pdfjs-dist/web/pdf_viewer.css';
-import CMapReaderFactory from './CMapReaderFactory.js'
+} from './plugin/pdfjs-dist/web/pdf_viewer.js';
+import './plugin/pdfjs-dist/web/pdf_viewer.css';
+import CMapReaderFactory from './plugin/CMapReaderFactory.js';
 export default {
-  name: 'cafe-pdf',
+  name: 'cafePdf',
   props: {
     filePath: {
       type: String,
       required: true,
-    },
-    prefixRenderId: {
-      type: String,
-      default:''
     },
     width: {
       type: String,
@@ -73,10 +68,6 @@ export default {
       type: Number,
       default: 0,
     },
-    scale: {
-      type: String,
-      default: '1',
-    }
   },
   data() {
     return {
@@ -90,6 +81,7 @@ export default {
       pdfLoadingTask: null,
       linkService: null,
       catalogue: null,
+      scale: 'auto',
       fnScroll: () => {},
     };
   },
@@ -97,11 +89,14 @@ export default {
     Tree,
   },
   computed: {
-    formateWidth() {
-      return /(%|px)/.test(this.width) ? this.width : this.width + 'px';
-    },
-    formateHeight() {
-      return /(%|px)/.test(this.height) ? this.height : this.height + 'px';
+    style() {
+      const { width, height } = this;
+      const fixedWidth = /(%|px)/.test(width) ? width : `${width}px`;
+      const fixedHeight = /(%|px)/.test(height) ? height : `${height}px`;
+      return {
+        width: fixedWidth,
+        height: fixedHeight,
+      };
     },
   },
   watch: {
@@ -120,11 +115,7 @@ export default {
     this.initViewer();
   },
   beforeDestroy() {
-    this.pdfLoadingTask.destroy();
-    this.pdfViewer = null;
-    this.linkService = null;
-    this.pdfLoadingTask = null;
-    this.timer = null;
+    this.destroyView();
   },
   methods: {
     traversalData(data) {
@@ -140,30 +131,25 @@ export default {
       this.linkService.navigateTo(item.dest);
     },
     initViewer() {
-      let _this = this;
+      const that = this;
       const eventBus = new EventBus();
       this.loading();
       this.linkService = new PDFLinkService();
-
       this.pdfViewer = new PDFViewer({
         container: this.$refs.container,
         useOnlyCssZoom: this.useOnlyCssZoom,
         textLayerMode: this.textLayerMode,
         linkService: this.linkService,
-        prefixRenderId: this.prefixRenderId,
         eventBus: eventBus,
       });
       this.linkService.setViewer(this.pdfViewer);
       this.pdfViewer.currentScaleValue = this.scale;
-      eventBus.on('pagesinit', function() {
-        _this.pdfViewer.currentScaleValue = _this.scale;
+      eventBus.on('pagesinit', () => {
+        that.pdfViewer.currentScaleValue = that.scale;
       });
-      eventBus.on('pagerender', function({pageNumber}) {
-        _this.$emit('on-pagerender', pageNumber);
-      });
-      this.pdfLoadingTask = PDFLib.getDocument({ 
+      this.pdfLoadingTask = PDFLib.getDocument({
         url: this.filePath,
-        CMapReaderFactory
+        CMapReaderFactory,
       });
       this.pdfLoadingTask.promise
         .then((pdfDoc) => {
@@ -176,7 +162,7 @@ export default {
                 this.catalogue = this.traversalData(outline);
               }
             });
-          };
+          }
           this.countPage = pdfDoc.numPages;
           this.$emit('on-success', this.countPage, pdfDoc);
           this.pdfViewer._currentScale = 1;
@@ -193,16 +179,18 @@ export default {
     fnThrottle(fn, delay, atleast) {
       let timer = null;
       let previous = null;
-      return function() {
-        let now = +new Date();
-        if (!previous) previous = now;
+      return function () {
+        const now = +new Date();
+        if (!previous) {
+          previous = now;
+        }
         if (atleast && now - previous > atleast) {
           fn();
           previous = now;
           clearTimeout(timer);
         } else {
           clearTimeout(timer);
-          timer = setTimeout(function() {
+          timer = setTimeout(() => {
             fn();
             previous = null;
           }, delay);
@@ -210,7 +198,7 @@ export default {
       };
     },
     handleScroll() {
-      let scrolled = this.$refs.container.scrollTop;
+      const scrolled = this.$refs.container.scrollTop;
       this.currentPage = this.pdfViewer._currentPageNumber;
       this.$emit('on-scroll', this.currentPage, this.pdfViewer, scrolled);
     },
@@ -225,7 +213,9 @@ export default {
       this.pdfViewer.currentScaleValue = this.scale;
     },
     goToPage(page) {
-      if (page < 1 || page > this.countPage) return;
+      if (page < 1 || page > this.countPage) {
+        return;
+      }
       this.pdfViewer.currentPageNumber = page;
     },
     loading() {
@@ -243,17 +233,18 @@ export default {
       this.pageLoading = true;
       this.loadingNum = 0;
       this.countNum = this.countPage;
-      let print = document.querySelector('#print-container');
+      const print = document.querySelector('#print-container');
       if (!print) {
-        let container = document.createElement('div');
+        const container = document.createElement('div');
         container.setAttribute('id', 'print-container');
         document.body.appendChild(container);
       } else {
         print.innerHTML = '';
       }
-      let pdf = await PDFLib.getDocument(this.filePath);
+      const pdf = await PDFLib.getDocument(this.filePath);
       for (let i = 1; i <= pdf.numPages; i++) {
         try {
+          // eslint-disable-next-line no-await-in-loop
           await this.rendPDF(pdf, i, scale);
           this.loadingNum = i;
         } catch (e) {
@@ -264,18 +255,18 @@ export default {
       window.print();
     },
     async rendPDF(pdf, num, scale) {
-      let page = await pdf.getPage(num);
-      let container = document.querySelector('#print-container');
-      let viewport = page.getViewport(scale);
-      let pageDiv = document.createElement('div');
-      pageDiv.setAttribute('id', 'page-' + (page.pageIndex + 1));
+      const page = await pdf.getPage(num);
+      const container = document.querySelector('#print-container');
+      const viewport = page.getViewport(scale);
+      const pageDiv = document.createElement('div');
+      pageDiv.setAttribute('id', `page-${page.pageIndex + 1}`);
       container.appendChild(pageDiv);
-      let canvas = document.createElement('canvas');
+      const canvas = document.createElement('canvas');
       pageDiv.appendChild(canvas);
-      let context = canvas.getContext('2d');
+      const context = canvas.getContext('2d');
       canvas.height = viewport.height;
       canvas.width = viewport.width;
-      let renderContext = {
+      const renderContext = {
         canvasContext: context,
         viewport: viewport,
       };
@@ -284,26 +275,42 @@ export default {
     printFile(scale = 1.5) {
       this.getPDF(scale);
     },
+    rotatePages(delta) {
+      this.pdfViewer.pagesRotation += delta;
+    },
+    rotateCW() {
+      this.rotatePages(90);
+    },
+    rotateCCW() {
+      this.rotatePages(-90);
+    },
+    destroyView() {
+      this.pdfLoadingTask.destroy();
+      this.pdfViewer = null;
+      this.linkService = null;
+      this.pdfLoadingTask = null;
+      this.timer = null;
+    },
   },
 };
 </script>
 <style>
 .pdf-box {
-  display: flex;
-  flex-direction: column;
   position: relative;
+  display: flex;
   overflow: hidden;
+  flex-direction: column;
 }
 .pdf-header {
   padding: 5px;
-  background-color: rgb(249, 249, 250);
+  background-color: rgb(249 249 250);
   border-bottom: 1px solid #d2d2d2;
 }
 .pdf-body {
   position: relative;
-  flex: 1;
-  overflow: hidden;
   display: flex;
+  overflow: hidden;
+  flex: 1;
 }
 .pdf-container {
   position: relative;
@@ -316,12 +323,10 @@ export default {
 }
 .pdf-body .page {
   position: relative;
-  box-shadow: 0 0 10px #ccc;
-  margin-bottom: 20px;
 }
 .pdf-footer {
   padding: 5px;
-  background-color: rgb(249, 249, 250);
+  background-color: rgb(249 249 250);
   border-top: 1px solid #d2d2d2;
 }
 #print-container {
@@ -330,26 +335,20 @@ export default {
 .page-loading {
   position: fixed;
   top: 0;
+  right: 0;
   bottom: 0;
   left: 0;
-  right: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  text-align: center;
-}
-.page-loading em {
-  margin-top: 10%;
-  display: block;
-  color: #fff;
-  font-style: normal;
-}
-.page-loading {
-  position: fixed;
-  top: 0;
-  left: 0;
+  z-index: 9999;
   width: 100%;
   height: 100%;
-  z-index: 9999;
-  background-color: rgba(0, 0, 0, 0.5);
+  text-align: center;
+  background-color: rgb(0 0 0 / 50%);
+}
+.page-loading em {
+  display: block;
+  margin-top: 10%;
+  font-style: normal;
+  color: #fff;
 }
 @media print {
   .pdf-box {
