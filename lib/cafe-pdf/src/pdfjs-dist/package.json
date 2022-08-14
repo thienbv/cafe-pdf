@@ -1,8 +1,7 @@
 {
   "name": "pdfjs-dist",
-  "version": "2.15.349",
+  "version": "2.3.200",
   "main": "build/pdf.js",
-  "types": "types/src/pdf.d.ts",
   "description": "Generic build of Mozilla's PDF.js library.",
   "keywords": [
     "Mozilla",
@@ -13,23 +12,17 @@
   "bugs": "https://github.com/mozilla/pdf.js/issues",
   "license": "Apache-2.0",
   "dependencies": {
-    "dommatrix": "^1.0.3",
-    "web-streams-polyfill": "^3.2.1"
+    "node-ensure": "^0.0.0",
+    "worker-loader": "^2.0.0"
   },
   "peerDependencies": {
-    "worker-loader": "^3.0.8"
-  },
-  "peerDependenciesMeta": {
-    "worker-loader": {
-      "optional": true
-    }
+    "webpack": "^3.0.0 || ^4.0.0-alpha.0 || ^4.0.0"
   },
   "browser": {
-    "canvas": false,
     "fs": false,
     "http": false,
     "https": false,
-    "url": false,
+    "node-ensure": false,
     "zlib": false
   },
   "format": "amd",
