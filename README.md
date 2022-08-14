@@ -1,6 +1,6 @@
 # Cafe-PDF
 
-![NPM Publish](https://github.com/wangdaodao/cafe-pdf/actions/workflows/npm-publish.yml/badge.svg) ![NPM version](https://img.shields.io/npm/v/cafe-pdf.svg) ![GitHub stars](https://img.shields.io/github/stars/wangdaodao/cafe-pdf.svg) ![GitHub issues](https://img.shields.io/github/issues/wangdaodao/cafe-pdf.svg) ![GitHub forks](https://img.shields.io/github/forks/wangdaodao/cafe-pdf.svg)
+![NPM Publish](https://github.com/wangdaodao/cafe-pdf/actions/workflows/npm-publish.yml/badge.svg) ![NPM version](https://img.shields.io/npm/v/cafe-pdf.svg)
 
 > Render PDF files on Vue pages using pdf.js, supporting text rendering, lazy loading, paging, scaling, and printing.
 
@@ -17,12 +17,10 @@ npm install cafe-pdf --save
 ## Quick Start
 ```js
 import cafePdf from 'cafe-pdf'
-import 'cafe-pdf/package/cafe-pdf.css'
 Vue.use(cafePdf)
 
 // OR
 import cafePdf from 'cafe-pdf'
-import 'cafe-pdf/package/cafe-pdf.css'
 export default {
   // ...
   components: {
@@ -45,6 +43,8 @@ Note: the use of print, need to cooperate with the print style.
       pdf-src:<input type="text" v-model.lazy="src" @change="fileChanged">
     </template>
     <template slot="footer">
+      <button @click="cw">cw</button>
+      <button @click="ccw">ccw</button>
       <button :disabled="currentNum<=1" @click="pre">pre</button>
       <input type="number" :min="1" :max="pageNum" v-model.number="currentNum" @change="pageChange(currentNum)">
       <button :disabled="currentNum>=pageNum" @click="next">next</button>
@@ -104,6 +104,12 @@ export default {
     },
     print() {
       this.$refs.pdf.printFile();
+    },
+    cw() {
+        this.$refs.pdf.rotateCW();
+    },
+    ccw() {
+        this.$refs.pdf.rotateCCW();
     }
   }
 };
@@ -157,8 +163,11 @@ If the file does not have a directory, it does not work) | boolean | — | true 
 | scale | scale | Scaling |
 | prePage | pre page | — |
 | nextPage | next page | — |
+| rotateCW | PDF clockwise rotation | — |
+| rotateCCW | PDF counterclockwise rotation | — |
 | goToPage | PDF change page | page |
 | printFile | Print all pdf | scale |
+| destroyView | PDF destroy | — |
 
 
 ## Slot
